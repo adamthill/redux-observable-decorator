@@ -59,3 +59,12 @@ export function createEpics<T extends Action, S>(
   const rootEpic = combineEpics<T, S>(...epics);
   return createEpicMiddleware<T, S>(rootEpic, options);
 }
+
+export function extractEpics(instance, ...instances) {
+  const allInstances = [instance, ...instances];
+  const epicsMetaData = allInstances.map(instance =>
+    getEpicsMetadata(instance).map(({ propertyName }) => instance[propertyName])
+  );
+  const epics = [].concat(...epicsMetaData);
+  return epics;
+}

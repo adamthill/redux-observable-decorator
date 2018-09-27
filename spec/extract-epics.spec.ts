@@ -1,15 +1,16 @@
-import { Epic, createEpics } from '../src/epic-decorator';
+import { Epic, extractEpics } from '../src/epic-decorator';
 import { createStore, applyMiddleware } from 'redux';
+import { combineEpics, createEpicMiddleware } from 'redux-observable';
 import 'rxjs/add/operator/mapTo';
 
-describe('createEpics', () => {
-  it('should create an for a decorated method', () => {
+describe('extractEpics', () => {
+  it('should extract epic function for a decorated method', () => {
     class Test {
       @Epic() epic = (action$) => action$.ofType('TEST_IN').mapTo({ type: 'TEST_OUT' });
     }
     const reducer = (state = [], action) => state.concat(action);
-    const epics = new Test();
-    const epicMiddleware = createEpics(epics);
+    const epics = extractEpics(new Test());
+    const epicMiddleware = createEpicMiddleware(combineEpics(...epics));
     const store = createStore(reducer, applyMiddleware(epicMiddleware));
     const expected = [
       { type: '@@redux/INIT' },
@@ -23,15 +24,15 @@ describe('createEpics', () => {
 
   });
 
-  it('should combine decorated methods into an epic', () => {
+  it('should extract multiple decorated methods from a class instance', () => {
     class Test {
       @Epic() epicOne = (action$) => action$.ofType('TEST_IN').mapTo({ type: 'TEST_OUT' });
       @Epic() epicTwo = (action$) => action$.ofType('TEST_OUT').mapTo({ type: 'TEST_END' });
       @Epic() epicThree = (action$) => action$.ofType('TEST_TWO').mapTo({ type: 'TEST_THREE' });
     }
     const reducer = (state = [], action) => state.concat(action);
-    const epics = new Test();
-    const epicMiddleware = createEpics(epics);
+    const epics = extractEpics(new Test());
+    const epicMiddleware = createEpicMiddleware(combineEpics(...epics));
     const store = createStore(reducer, applyMiddleware(epicMiddleware));
     const expected = [
       { type: '@@redux/INIT' },
@@ -48,7 +49,7 @@ describe('createEpics', () => {
     expect(actual).toEqual(expected);
   });
 
-  it('should handle multipul classes', () => {
+  it('should extract multiple methods from multiple classes', () => {
     class TestOne {
       @Epic() a = (action$) => action$.ofType('TEST_A_IN').mapTo({ type: 'TEST_A_OUT' });
       @Epic() b = (action$) => action$.ofType('TEST_B_IN').mapTo({ type: 'TEST_B_OUT' });
@@ -63,7 +64,8 @@ describe('createEpics', () => {
     const reducer = (state = [], action) => state.concat(action);
     const epicOne = new TestOne();
     const epicTwo = new TestTwo();
-    const epicMiddleware = createEpics(epicOne, epicTwo);
+    const epics = extractEpics(epicOne, epicTwo);
+    const epicMiddleware = createEpicMiddleware(combineEpics(...epics));
     const store = createStore(reducer, applyMiddleware(epicMiddleware));
     const expected = [
       { type: '@@redux/INIT' },
@@ -92,79 +94,5 @@ describe('createEpics', () => {
 
     expect(actual).toEqual(expected);
   });
-
-  it('should pass in the options object if one is provided', () => {
-    class TestOneDep {
-      @Epic() a = (action$, store, deps) => action$
-        .ofType('TEST_A_IN')
-        .mapTo({ type: 'TEST_A_OUT', payload: deps.foo() });
-    }
-
-    class TestTwoDep {
-      @Epic() d = (action$, store, deps) => action$
-        .ofType('TEST_D_IN')
-        .mapTo({ type: 'TEST_D_OUT', payload: deps.foo() });
-
-    }
-
-    const reducer = (state = [], action) => state.concat(action);
-    const epicOne = new TestOneDep();
-    const epicTwo = new TestTwoDep();
-
-    const epicMiddleware = createEpics(epicOne, epicTwo, {
-      dependencies: {
-        foo: function () { return 'bar'; },
-      },
-    }, );
-
-    const store = createStore(reducer, applyMiddleware(epicMiddleware));
-
-    const expected = [
-      { type: '@@redux/INIT' },
-      { type: 'TEST_A_IN' },
-      { type: 'TEST_A_OUT', payload: 'bar' },
-      { type: 'TEST_D_IN' },
-      { type: 'TEST_D_OUT', payload: 'bar' },
-    ];
-
-    store.dispatch({ type: 'TEST_A_IN' });
-    store.dispatch({ type: 'TEST_D_IN' });
-
-
-    const actual = store.getState();
-
-    expect(actual).toEqual(expected);
-  });
-
-  it('should not pass in dependencies if no options provided', () => {
-    class TestOneNoDep {
-      @Epic() a = (action$, store, deps) => {
-        console.log(store, deps);
-        return action$.ofType('TEST_A_IN').mapTo({ type: 'TEST_A_OUT', payload: deps });
-      }
-    }
-
-    const reducer = (state = [], action) => state.concat(action);
-    const epicOne = new TestOneNoDep();
-
-
-    const epicMiddleware = createEpics(epicOne);
-
-    const store = createStore(reducer, applyMiddleware(epicMiddleware));
-
-    const expected = [
-      { type: '@@redux/INIT' },
-      { type: 'TEST_A_IN' },
-      { type: 'TEST_A_OUT', payload: undefined },
-
-    ];
-
-    store.dispatch({ type: 'TEST_A_IN' });
-
-
-    const actual = store.getState();
-    expect(actual).toEqual(expected);
-  });
-
 
 });

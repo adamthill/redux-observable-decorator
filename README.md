@@ -76,6 +76,19 @@ const epicMiddleware = createEpics(epics);
 const store = createStore(reducer, applyMiddleware(epicMiddleware));
 ```
 
+Use `extractEpics` if you choose to use redux-observable's `combineEpics` and `createEpicMiddleware` in your application.
+
+```ts
+import { classOne } from './classOne';
+import { classTwo } from './classTwo';
+
+const classOneEpics = extractEpics(new classOne());
+const classTwoEpics = extractEcpis(new classTwo());
+const epics = combineEpics(...classOneEpics, ...classTwoEpics);
+const epicMiddleware = createEpicMiddleware(epics);
+const store = createStore(reducer, applyMiddleware(epicMiddleware));
+```
+
 # Inspiration
 
 The `@Effect` decorator from [ngrx/effects](https://github.com/ngrx/effects)

@@ -1,1 +1,1 @@
-export { Epic, createEpics, EpicMetadata, getEpicsMetadata } from './epic-decorator'
+export { Epic, createEpics, EpicMetadata, getEpicsMetadata, extractEpics } from './epic-decorator'
